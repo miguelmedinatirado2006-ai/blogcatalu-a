@@ -1,0 +1,6 @@
+{
+  "name": "Rutas por Cataluña",
+  "description": "Blog editorial de rutas en coche, moto y a pie por Cataluña con fichas técnicas, mapas de Wikiloc y Google Maps, crónicas ilustradas y consejos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

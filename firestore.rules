@@ -1,0 +1,245 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function emailKey(email) {
+      return email.lower().replace('[^a-z0-9_-]', '_');
+    }
+
+    function isPrimaryAdmin() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() == 'miguelmedinatirado2006@gmail.com';
+    }
+
+    function isDelegatedAdmin() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/authorizedAdmins/$(emailKey(request.auth.token.email)))
+        && get(/databases/$(database)/documents/authorizedAdmins/$(emailKey(request.auth.token.email))).data.email == request.auth.token.email.lower()
+        && get(/databases/$(database)/documents/authorizedAdmins/$(emailKey(request.auth.token.email))).data.active == true;
+    }
+
+    function isAdmin() {
+      return isPrimaryAdmin() || isDelegatedAdmin();
+    }
+
+    function isValidRoute(data) {
+      return data.keys().hasAll([
+          'title',
+          'comarca',
+          'introduction',
+          'coverImage',
+          'modes',
+          'distanceKm',
+          'duration',
+          'difficulty',
+          'wikilocUrl',
+          'googleMapsUrl',
+          'articleBody',
+          'recommendations',
+          'tips',
+          'authorId',
+          'published',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'title',
+          'comarca',
+          'introduction',
+          'coverImage',
+          'modes',
+          'otherModeDetail',
+          'distanceKm',
+          'duration',
+          'difficulty',
+          'startPoint',
+          'elevationGain',
+          'wikilocUrl',
+          'googleMapsUrl',
+          'articleBody',
+          'recommendations',
+          'tips',
+          'authorId',
+          'authorEmail',
+          'published',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 140
+        && data.comarca is string && data.comarca.size() >= 2 && data.comarca.size() <= 80
+        && data.introduction is string && data.introduction.size() >= 10 && data.introduction.size() <= 1200
+        && data.coverImage is string && data.coverImage.size() >= 1 && data.coverImage.size() <= 250000
+        && data.modes is list
+          && data.modes.size() >= 1
+          && data.modes.size() <= 4
+          && data.modes[0] is string
+          && data.modes.hasOnly(['coche', 'moto', 'a_pie', 'otros'])
+        && (!('otherModeDetail' in data) || (data.otherModeDetail is string && data.otherModeDetail.size() <= 120))
+        && (data.distanceKm is int || data.distanceKm is float)
+          && data.distanceKm >= 0
+          && data.distanceKm <= 5000
+        && data.duration is string && data.duration.size() >= 1 && data.duration.size() <= 60
+        && data.difficulty is string && data.difficulty in ['Fácil', 'Moderada', 'Difícil', 'Exigente']
+        && (!('startPoint' in data) || (data.startPoint is string && data.startPoint.size() <= 120))
+        && (!('elevationGain' in data) || (data.elevationGain is string && data.elevationGain.size() <= 60))
+        && data.wikilocUrl is string && data.wikilocUrl.size() <= 2000
+        && data.googleMapsUrl is string && data.googleMapsUrl.size() <= 2000
+        && data.articleBody is string && data.articleBody.size() >= 10 && data.articleBody.size() <= 450000
+        && data.recommendations is string && data.recommendations.size() <= 15000
+        && data.tips is string && data.tips.size() <= 15000
+        && data.authorId is string && isValidId(data.authorId)
+        && (!('authorEmail' in data) || (data.authorEmail is string && data.authorEmail.size() >= 3 && data.authorEmail.size() <= 180))
+        && data.published is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdminSecurity(data) {
+      return data.keys().hasAll(['passwordHash', 'salt', 'updatedBy', 'updatedAt'])
+        && data.keys().hasOnly(['passwordHash', 'salt', 'updatedBy', 'updatedAt'])
+        && data.passwordHash is string && data.passwordHash.size() >= 64 && data.passwordHash.size() <= 128
+        && data.salt is string && data.salt.size() >= 16 && data.salt.size() <= 64
+        && data.updatedBy is string && isValidId(data.updatedBy) && data.updatedBy == request.auth.uid
+        && data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    function isValidAdminBlogState(data) {
+      return data.keys().hasAll(['seeded', 'updatedBy', 'updatedAt'])
+        && data.keys().hasOnly(['seeded', 'updatedBy', 'updatedAt'])
+        && data.seeded is bool
+        && data.updatedBy is string && isValidId(data.updatedBy) && data.updatedBy == request.auth.uid
+        && data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    function isValidPublicBlogStatus(data) {
+      return data.keys().hasAll(['initialized', 'updatedBy', 'updatedAt'])
+        && data.keys().hasOnly(['initialized', 'updatedBy', 'updatedAt'])
+        && data.initialized is bool
+        && data.updatedBy is string && isValidId(data.updatedBy) && data.updatedBy == request.auth.uid
+        && data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    function isValidAuthorizedAdmin(data, adminId) {
+      return data.keys().hasAll(['email', 'active', 'ownerEmail', 'addedBy', 'createdAt'])
+        && data.keys().hasOnly(['email', 'label', 'active', 'ownerEmail', 'addedBy', 'createdAt'])
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 180
+        && data.email == data.email.lower()
+        && adminId == emailKey(data.email)
+        && (!('label' in data) || (data.label is string && data.label.size() <= 80))
+        && data.active is bool
+        && data.ownerEmail is string && data.ownerEmail == 'miguelmedinatirado2006@gmail.com'
+        && data.addedBy is string && isValidId(data.addedBy) && data.addedBy == request.auth.uid
+        && data.createdAt is timestamp && data.createdAt == request.time;
+    }
+
+    match /routes/{routeId} {
+      allow get: if isValidId(routeId) && (existing().published == true || isAdmin());
+      allow list: if resource.data.published == true
+        || isPrimaryAdmin()
+        || (isSignedIn() && request.auth.token.email_verified == true && resource.data.authorEmail == request.auth.token.email.lower());
+      allow create: if isAdmin()
+        && isValidId(routeId)
+        && isValidRoute(incoming())
+        && incoming().authorId == request.auth.uid
+        && (!('authorEmail' in incoming()) || incoming().authorEmail == request.auth.token.email.lower())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isAdmin()
+        && isValidId(routeId)
+        && isValidRoute(incoming())
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && (!('authorEmail' in existing()) || incoming().authorEmail == existing().authorEmail)
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'title',
+          'comarca',
+          'introduction',
+          'coverImage',
+          'modes',
+          'otherModeDetail',
+          'distanceKm',
+          'duration',
+          'difficulty',
+          'startPoint',
+          'elevationGain',
+          'wikilocUrl',
+          'googleMapsUrl',
+          'articleBody',
+          'recommendations',
+          'tips',
+          'published',
+          'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(routeId);
+    }
+
+    match /adminSettings/{settingId} {
+      allow get: if isAdmin() && settingId == 'security';
+      allow list: if false;
+      allow create: if isPrimaryAdmin() && settingId == 'security' && isValidAdminSecurity(incoming());
+      allow update: if isPrimaryAdmin()
+        && settingId == 'security'
+        && isValidAdminSecurity(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['passwordHash', 'salt', 'updatedBy', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /adminMeta/{metaId} {
+      allow get: if isAdmin() && metaId == 'blogState';
+      allow list: if false;
+      allow create: if isAdmin() && metaId == 'blogState' && isValidAdminBlogState(incoming());
+      allow update: if isAdmin()
+        && metaId == 'blogState'
+        && isValidAdminBlogState(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['seeded', 'updatedBy', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /publicMeta/{metaId} {
+      allow get: if isValidId(metaId) && metaId == 'status';
+      allow list: if false;
+      allow create: if isAdmin() && metaId == 'status' && isValidPublicBlogStatus(incoming());
+      allow update: if isAdmin()
+        && metaId == 'status'
+        && isValidPublicBlogStatus(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['initialized', 'updatedBy', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /authorizedAdmins/{adminId} {
+      allow get: if isValidId(adminId) && (
+        isPrimaryAdmin()
+        || (isSignedIn() && request.auth.token.email_verified == true && adminId == emailKey(request.auth.token.email))
+      );
+      allow list: if isPrimaryAdmin() && resource.data.ownerEmail == request.auth.token.email.lower();
+      allow create: if isPrimaryAdmin()
+        && isValidId(adminId)
+        && isValidAuthorizedAdmin(incoming(), adminId);
+      allow update: if false;
+      allow delete: if isPrimaryAdmin() && isValidId(adminId);
+    }
+  }
+}

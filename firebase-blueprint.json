@@ -1,0 +1,268 @@
+{
+  "entities": {
+    "Route": {
+      "title": "Route",
+      "description": "An editorial route guide across Catalonia with technical sheet, maps, narrative article, recommendations, and tips.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Route headline title",
+          "minLength": 3,
+          "maxLength": 140
+        },
+        "comarca": {
+          "type": "string",
+          "description": "Catalan region or comarca",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "introduction": {
+          "type": "string",
+          "description": "Editorial introduction paragraph",
+          "minLength": 10,
+          "maxLength": 1200
+        },
+        "coverImage": {
+          "type": "string",
+          "description": "Cover image path or compressed data URL",
+          "minLength": 1,
+          "maxLength": 250000
+        },
+        "modes": {
+          "type": "array",
+          "description": "Supported travel modes (coche, moto, a_pie, otros)"
+        },
+        "otherModeDetail": {
+          "type": "string",
+          "description": "Optional specification when otros mode is selected",
+          "maxLength": 120
+        },
+        "distanceKm": {
+          "type": "number",
+          "description": "Total route distance in kilometers"
+        },
+        "duration": {
+          "type": "string",
+          "description": "Estimated route duration",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "difficulty": {
+          "type": "string",
+          "description": "Route difficulty tier",
+          "enum": ["Fácil", "Moderada", "Difícil", "Exigente"]
+        },
+        "startPoint": {
+          "type": "string",
+          "description": "Starting point or town",
+          "maxLength": 120
+        },
+        "elevationGain": {
+          "type": "string",
+          "description": "Optional positive elevation gain",
+          "maxLength": 60
+        },
+        "wikilocUrl": {
+          "type": "string",
+          "description": "Wikiloc route URL or iframe embed URL",
+          "maxLength": 2000
+        },
+        "googleMapsUrl": {
+          "type": "string",
+          "description": "Google Maps route URL or iframe embed URL",
+          "maxLength": 2000
+        },
+        "articleBody": {
+          "type": "string",
+          "description": "Full editorial article markdown body with optional embedded images",
+          "minLength": 10,
+          "maxLength": 450000
+        },
+        "recommendations": {
+          "type": "string",
+          "description": "Curated route recommendations",
+          "maxLength": 15000
+        },
+        "tips": {
+          "type": "string",
+          "description": "Final practical tips for travelers",
+          "maxLength": 15000
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the creating admin",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorEmail": {
+          "type": "string",
+          "description": "Lowercase verified email of the creating admin",
+          "minLength": 3,
+          "maxLength": 180
+        },
+        "published": {
+          "type": "boolean",
+          "description": "Whether the route is publicly visible"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp"
+        }
+      },
+      "required": [
+        "title",
+        "comarca",
+        "introduction",
+        "coverImage",
+        "modes",
+        "distanceKm",
+        "duration",
+        "difficulty",
+        "wikilocUrl",
+        "googleMapsUrl",
+        "articleBody",
+        "recommendations",
+        "tips",
+        "authorId",
+        "published",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminSecurity": {
+      "title": "AdminSecurity",
+      "description": "Salted SHA-256 hash for the secondary admin panel password lock.",
+      "type": "object",
+      "properties": {
+        "passwordHash": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 128
+        },
+        "salt": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 64
+        },
+        "updatedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["passwordHash", "salt", "updatedBy", "updatedAt"]
+    },
+    "AdminBlogState": {
+      "title": "AdminBlogState",
+      "description": "Tracks one-time starter catalog initialization state.",
+      "type": "object",
+      "properties": {
+        "seeded": {
+          "type": "boolean"
+        },
+        "updatedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["seeded", "updatedBy", "updatedAt"]
+    },
+    "PublicBlogStatus": {
+      "title": "PublicBlogStatus",
+      "description": "Public flag indicating whether the blog catalog has been initialized by the admin.",
+      "type": "object",
+      "properties": {
+        "initialized": {
+          "type": "boolean"
+        },
+        "updatedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["initialized", "updatedBy", "updatedAt"]
+    },
+    "AuthorizedAdmin": {
+      "title": "AuthorizedAdmin",
+      "description": "Delegated admin Google email authorized by the primary owner.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 180
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "ownerEmail": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 180
+        },
+        "addedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["email", "active", "ownerEmail", "addedBy", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/routes/{routeId}": {
+      "schema": { "$ref": "#/entities/Route" },
+      "description": "Publicly readable published Catalonia route guides; admin-only create, update, delete, and draft reads."
+    },
+    "/adminSettings/{settingId}": {
+      "schema": { "$ref": "#/entities/AdminSecurity" },
+      "description": "Admin-only secondary password configuration document."
+    },
+    "/adminMeta/{metaId}": {
+      "schema": { "$ref": "#/entities/AdminBlogState" },
+      "description": "Admin-only blog initialization state."
+    },
+    "/publicMeta/{metaId}": {
+      "schema": { "$ref": "#/entities/PublicBlogStatus" },
+      "description": "Public status indicator showing whether Firestore catalog has been initialized."
+    },
+    "/authorizedAdmins/{adminId}": {
+      "schema": { "$ref": "#/entities/AuthorizedAdmin" },
+      "description": "List of Google emails granted admin permissions by the primary owner."
+    }
+  }
+}
